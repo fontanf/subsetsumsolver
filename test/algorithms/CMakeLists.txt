@@ -1,0 +1,8 @@
+add_executable(SubsetSumSolver_dynamic_programming_bellman_test)
+target_sources(SubsetSumSolver_dynamic_programming_bellman_test PRIVATE
+    dynamic_programming_bellman_test.cpp)
+target_link_libraries(SubsetSumSolver_dynamic_programming_bellman_test
+    SubsetSumSolver_dynamic_programming_bellman
+    SubsetSumSolver_tests
+    GTest::gtest_main)
+add_test(SubsetSumSolver_dynamic_programming_bellman_test SubsetSumSolver_dynamic_programming_bellman_test)

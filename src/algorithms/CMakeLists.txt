@@ -1,0 +1,26 @@
+add_library(SubsetSumSolver_dynamic_programming_bellman)
+target_sources(SubsetSumSolver_dynamic_programming_bellman PRIVATE
+    dynamic_programming_bellman.cpp)
+target_include_directories(SubsetSumSolver_dynamic_programming_bellman PUBLIC
+    ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(SubsetSumSolver_dynamic_programming_bellman PUBLIC
+    SubsetSumSolver)
+add_library(SubsetSumSolver::dynamic_programming_bellman ALIAS SubsetSumSolver_dynamic_programming_bellman)
+
+add_library(SubsetSumSolver_dynamic_programming_balancing)
+target_sources(SubsetSumSolver_dynamic_programming_balancing PRIVATE
+    dynamic_programming_balancing.cpp)
+target_include_directories(SubsetSumSolver_dynamic_programming_balancing PUBLIC
+    ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(SubsetSumSolver_dynamic_programming_balancing PUBLIC
+    SubsetSumSolver)
+add_library(SubsetSumSolver::dynamic_programming_balancing ALIAS SubsetSumSolver_dynamic_programming_balancing)
+
+add_library(SubsetSumSolver_dynamic_programming_primal_dual)
+target_sources(SubsetSumSolver_dynamic_programming_primal_dual PRIVATE
+    dynamic_programming_primal_dual.cpp)
+target_include_directories(SubsetSumSolver_dynamic_programming_primal_dual PUBLIC
+    ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(SubsetSumSolver_dynamic_programming_primal_dual PUBLIC
+    SubsetSumSolver)
+add_library(SubsetSumSolver::dynamic_programming_primal_dual ALIAS SubsetSumSolver_dynamic_programming_primal_dual)
