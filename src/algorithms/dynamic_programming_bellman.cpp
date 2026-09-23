@@ -197,7 +197,9 @@ DynamicProgrammingBellmanWordRamOutput subsetsumsolver::dynamic_programming_bell
     }
 
     Weight optimal_value = 0;
-    for (Weight word = capacity_number_of_words; optimal_value == 0; --word) {
+    for (Weight word = capacity_number_of_words;
+            word >= 0 && optimal_value == 0;
+            --word) {
         if (output.values[word] == 0)
             continue;
         for (int bit = 63; bit >= 0; --bit) {
