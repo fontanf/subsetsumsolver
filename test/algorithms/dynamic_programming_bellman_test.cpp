@@ -1,6 +1,7 @@
 #include "subsetsumsolver/tests.hpp"
 
 #include "subsetsumsolver/algorithms/dynamic_programming_bellman.hpp"
+#include "subsetsumsolver/instance_builder.hpp"
 
 using namespace subsetsumsolver;
 
@@ -100,3 +101,19 @@ INSTANTIATE_TEST_SUITE_P(
                     get_pthree_instance_paths(1000),
                     get_psix_instance_paths(10),
                 })));
+
+TEST(SubsetSumDynamicProgrammingBellmanWordRam, NothingButZeroReachable)
+{
+    // Only weight '0' is reachable: the final scan for the optimal value
+    // must stop at word '0' instead of reading out of bounds.
+    for (Weight item_weight: {-1, 200}) {
+        InstanceBuilder instance_builder;
+        instance_builder.set_capacity(100);
+        if (item_weight >= 0)
+            instance_builder.add_item(item_weight);
+        const Instance instance = instance_builder.build();
+        auto output = dynamic_programming_bellman_word_ram(instance);
+        EXPECT_EQ(output.value, 0);
+        EXPECT_EQ(output.bound, 0);
+    }
+}
