@@ -294,6 +294,14 @@ void dynamic_programming_bellman_word_ram_rec_rec(
         Solution& solution,
         const Parameters& parameters)
 {
+    // Single item. Otherwise, the second half would be empty and the
+    // recursion wouldn't terminate.
+    if (item_pos_2 - item_pos_1 == 1) {
+        if (instance.weight(item_pos_1) <= capacity)
+            solution.add(item_pos_1);
+        return;
+    }
+
     ItemId k = (item_pos_1 + item_pos_2 - 1) / 2 + 1;
 
     auto values_1 = dynamic_programming_bellman_word_ram_rec_opts(
@@ -393,13 +401,15 @@ Output subsetsumsolver::dynamic_programming_bellman_word_ram_rec(
     algorithm_formatter.print_header();
 
     Solution solution(instance);
-    dynamic_programming_bellman_word_ram_rec_rec(
-        instance,
-        0,
-        instance.number_of_items(),
-        instance.capacity(),
-        solution,
-        parameters);
+    if (instance.number_of_items() > 0) {
+        dynamic_programming_bellman_word_ram_rec_rec(
+            instance,
+            0,
+            instance.number_of_items(),
+            instance.capacity(),
+            solution,
+            parameters);
+    }
     if (parameters.timer.needs_to_end()) {
         algorithm_formatter.end();
         return output;

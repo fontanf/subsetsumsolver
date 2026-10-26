@@ -3,7 +3,10 @@
 #include "subsetsumsolver/algorithms/dynamic_programming_bellman.hpp"
 #include "subsetsumsolver/instance_builder.hpp"
 
+#include <boost/filesystem.hpp>
+
 using namespace subsetsumsolver;
+namespace fs = boost::filesystem;
 
 TEST_P(ExactAlgorithmTest, ExactAlgorithm)
 {
@@ -117,3 +120,49 @@ TEST(SubsetSumDynamicProgrammingBellmanWordRam, NothingButZeroReachable)
         EXPECT_EQ(output.bound, 0);
     }
 }
+
+struct SubsetSumDynamicProgrammingBellmanWordRamRecTestParams
+{
+    fs::path instance_path;
+
+    fs::path certificate_path;
+};
+
+inline std::ostream& operator<<(
+        std::ostream& os,
+        const SubsetSumDynamicProgrammingBellmanWordRamRecTestParams& test_params)
+{
+    os << test_params.instance_path;
+    return os;
+}
+
+class SubsetSumDynamicProgrammingBellmanWordRamRecTest: public testing::TestWithParam<SubsetSumDynamicProgrammingBellmanWordRamRecTestParams> { };
+
+TEST_P(SubsetSumDynamicProgrammingBellmanWordRamRecTest, SubsetSumDynamicProgrammingBellmanWordRamRec)
+{
+    SubsetSumDynamicProgrammingBellmanWordRamRecTestParams test_params = GetParam();
+    InstanceBuilder instance_builder;
+    instance_builder.read(test_params.instance_path.string(), "standard");
+    const Instance instance = instance_builder.build();
+    const Solution solution(instance, test_params.certificate_path.string());
+
+    auto output = dynamic_programming_bellman_word_ram_rec(instance);
+    EXPECT_EQ(output.value, solution.weight());
+    EXPECT_EQ(output.value, output.solution.weight());
+    EXPECT_EQ(output.bound, solution.weight());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+        SubsetSum,
+        SubsetSumDynamicProgrammingBellmanWordRamRecTest,
+        testing::ValuesIn(std::vector<SubsetSumDynamicProgrammingBellmanWordRamRecTestParams>{
+            {
+                fs::path("data") / "tests" / "no_item" / "instance.txt",
+                fs::path("data") / "tests" / "no_item" / "solution.txt",
+            }, {
+                fs::path("data") / "tests" / "single_item" / "instance.txt",
+                fs::path("data") / "tests" / "single_item" / "solution.txt",
+            }, {
+                fs::path("data") / "tests" / "single_item_too_heavy" / "instance.txt",
+                fs::path("data") / "tests" / "single_item_too_heavy" / "solution.txt",
+            }}));
