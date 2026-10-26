@@ -4,6 +4,33 @@
 
 using namespace subsetsumsolver;
 
+namespace
+{
+
+/**
+ * Compute the greatest common divisor of the weights of the items.
+ *
+ * The weight of every subset of items is a multiple of it: dividing the
+ * weights and the capacity (rounded down) by it doesn't change the solutions,
+ * and divides the tables of the dynamic programming algorithms by it.
+ */
+Weight compute_weights_gcd(const Instance& instance)
+{
+    Weight gcd = 0;
+    for (ItemId item_id = 0; item_id < instance.number_of_items(); ++item_id) {
+        Weight weight = instance.weight(item_id);
+        while (weight != 0) {
+            Weight remainder = gcd % weight;
+            gcd = weight;
+            weight = remainder;
+        }
+    }
+    // No item, or only items of weight 0.
+    return (gcd > 0)? gcd: 1;
+}
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////// dynamic_programming_bellman_array ///////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -17,7 +44,10 @@ DynamicProgrammingBellmanArrayOutput subsetsumsolver::dynamic_programming_bellma
     algorithm_formatter.start("Dynamic programming - Bellman - array");
     algorithm_formatter.print_header();
 
-    output.values = std::vector<ItemId>(instance.capacity() + 1, -1);
+    Weight gcd = compute_weights_gcd(instance);
+    Weight capacity = instance.capacity() / gcd;
+    output.gcd = gcd;
+    output.values = std::vector<ItemId>(capacity + 1, -1);
     output.values[0] = -2;
     Weight weight_sum = 0;
     for (ItemId item_id = 0; item_id < instance.number_of_items(); ++item_id) {
@@ -28,12 +58,13 @@ DynamicProgrammingBellmanArrayOutput subsetsumsolver::dynamic_programming_bellma
         }
 
         // Update DP table
-        weight_sum += instance.weight(item_id);
-        for (Weight weight = std::min(instance.capacity(), weight_sum);
-                weight >= instance.weight(item_id);
+        Weight item_weight = instance.weight(item_id) / gcd;
+        weight_sum += item_weight;
+        for (Weight weight = std::min(capacity, weight_sum);
+                weight >= item_weight;
                 weight--) {
             if (output.values[weight] == -1
-                    && output.values[weight - instance.weight(item_id)] != -1) {
+                    && output.values[weight - item_weight] != -1) {
                 output.values[weight] = item_id;
             }
         }
@@ -43,13 +74,13 @@ DynamicProgrammingBellmanArrayOutput subsetsumsolver::dynamic_programming_bellma
         //std::cout << std::endl;
 
         // If optimum reached, stop.
-        if (output.values[instance.capacity()] != -1)
+        if (output.values[capacity] != -1)
             break;
     }
 
     Solution solution(instance);
     Weight weight_cur = 0;
-    for (Weight weight = instance.capacity(); weight >= 0; weight--) {
+    for (Weight weight = capacity; weight >= 0; weight--) {
         if (output.values[weight] != -1) {
             weight_cur = weight;
             break;
@@ -58,7 +89,7 @@ DynamicProgrammingBellmanArrayOutput subsetsumsolver::dynamic_programming_bellma
     while (weight_cur > 0) {
         ItemId item_id = output.values[weight_cur];
         solution.add(item_id);
-        weight_cur -= instance.weight(item_id);
+        weight_cur -= instance.weight(item_id) / gcd;
     }
 
     // Update value.
@@ -149,8 +180,11 @@ DynamicProgrammingBellmanWordRamOutput subsetsumsolver::dynamic_programming_bell
     algorithm_formatter.start("Dynamic programming - Bellman - word RAM");
     algorithm_formatter.print_header();
 
-    Weight capacity_number_of_words = (instance.capacity() >> 6);
-    Weight capacity_number_of_bits_to_shift = instance.capacity() - (capacity_number_of_words << 6);
+    Weight gcd = compute_weights_gcd(instance);
+    Weight capacity = instance.capacity() / gcd;
+    output.gcd = gcd;
+    Weight capacity_number_of_words = (capacity >> 6);
+    Weight capacity_number_of_bits_to_shift = capacity - (capacity_number_of_words << 6);
     output.values = std::vector<uint64_t>(capacity_number_of_words + 1, 0);
     output.values[0] = 1;
 
@@ -163,12 +197,13 @@ DynamicProgrammingBellmanWordRamOutput subsetsumsolver::dynamic_programming_bell
             return output;
         }
 
-        if (instance.weight(item_id) > instance.capacity())
+        Weight item_weight = instance.weight(item_id) / gcd;
+        if (item_weight > capacity)
             continue;
-        Weight number_of_words_to_shift = (instance.weight(item_id) >> 6);
-        Weight number_of_bits_to_shift_left = instance.weight(item_id) - (number_of_words_to_shift << 6);
+        Weight number_of_words_to_shift = (item_weight >> 6);
+        Weight number_of_bits_to_shift_left = item_weight - (number_of_words_to_shift << 6);
         Weight number_of_bits_to_shift_right = 64 - number_of_bits_to_shift_left;
-        weight_sum += instance.weight(item_id);
+        weight_sum += item_weight;
         Weight word_read = std::min(capacity_number_of_words, (weight_sum >> 6));
         Weight word_write = word_read - number_of_words_to_shift;
         if (number_of_bits_to_shift_left != 0) {
@@ -204,9 +239,9 @@ DynamicProgrammingBellmanWordRamOutput subsetsumsolver::dynamic_programming_bell
             continue;
         for (int bit = 63; bit >= 0; --bit) {
             Weight weight = 64 * word + bit;
-            if (weight <= instance.capacity()
+            if (weight <= capacity
                     && ((output.values[word] >> bit) & 1) == 1) {
-                optimal_value = weight;
+                optimal_value = gcd * weight;
                 break;
             }
         }
@@ -230,6 +265,7 @@ DynamicProgrammingBellmanWordRamOutput subsetsumsolver::dynamic_programming_bell
 
 std::vector<uint64_t> dynamic_programming_bellman_word_ram_rec_opts(
         const Instance& instance,
+        Weight gcd,
         ItemId item_pos_1,
         ItemId item_pos_2,
         Weight capacity,
@@ -247,12 +283,13 @@ std::vector<uint64_t> dynamic_programming_bellman_word_ram_rec_opts(
         if (parameters.timer.needs_to_end())
             return {};
 
-        if (instance.weight(item_id) > capacity)
+        Weight item_weight = instance.weight(item_id) / gcd;
+        if (item_weight > capacity)
             continue;
-        Weight number_of_words_to_shift = (instance.weight(item_id) >> 6);
-        Weight number_of_bits_to_shift_left = instance.weight(item_id) - (number_of_words_to_shift << 6);
+        Weight number_of_words_to_shift = (item_weight >> 6);
+        Weight number_of_bits_to_shift_left = item_weight - (number_of_words_to_shift << 6);
         Weight number_of_bits_to_shift_right = 64 - number_of_bits_to_shift_left;
-        weight_sum += instance.weight(item_id);
+        weight_sum += item_weight;
         Weight word_read = std::min(capacity_number_of_words, (weight_sum >> 6));
         Weight word_write = word_read - number_of_words_to_shift;
         //std::cout << "weight_sum " << weight_sum << std::endl;
@@ -288,6 +325,7 @@ std::vector<uint64_t> dynamic_programming_bellman_word_ram_rec_opts(
 
 void dynamic_programming_bellman_word_ram_rec_rec(
         const Instance& instance,
+        Weight gcd,
         ItemId item_pos_1,
         ItemId item_pos_2,
         Weight capacity,
@@ -297,7 +335,7 @@ void dynamic_programming_bellman_word_ram_rec_rec(
     // Single item. Otherwise, the second half would be empty and the
     // recursion wouldn't terminate.
     if (item_pos_2 - item_pos_1 == 1) {
-        if (instance.weight(item_pos_1) <= capacity)
+        if (instance.weight(item_pos_1) / gcd <= capacity)
             solution.add(item_pos_1);
         return;
     }
@@ -306,6 +344,7 @@ void dynamic_programming_bellman_word_ram_rec_rec(
 
     auto values_1 = dynamic_programming_bellman_word_ram_rec_opts(
             instance,
+            gcd,
             item_pos_1,
             k,
             capacity,
@@ -314,6 +353,7 @@ void dynamic_programming_bellman_word_ram_rec_rec(
         return;
     auto values_2 = dynamic_programming_bellman_word_ram_rec_opts(
             instance,
+            gcd,
             k,
             item_pos_2,
             capacity,
@@ -365,15 +405,16 @@ void dynamic_programming_bellman_word_ram_rec_rec(
     //    << std::endl;
 
     if (item_pos_1 == k - 1)
-        if (capacity_1_best == instance.weight(item_pos_1))
+        if (capacity_1_best == instance.weight(item_pos_1) / gcd)
             solution.add(item_pos_1);
     if (k == item_pos_2 - 1)
-        if (capacity_2_best == instance.weight(k))
+        if (capacity_2_best == instance.weight(k) / gcd)
             solution.add(k);
 
     if (item_pos_1 != k - 1) {
         dynamic_programming_bellman_word_ram_rec_rec(
                 instance,
+                gcd,
                 item_pos_1,
                 k,
                 capacity_1_best,
@@ -383,6 +424,7 @@ void dynamic_programming_bellman_word_ram_rec_rec(
     if (k != item_pos_2 - 1) {
         dynamic_programming_bellman_word_ram_rec_rec(
                 instance,
+                gcd,
                 k,
                 item_pos_2,
                 capacity_2_best,
@@ -402,11 +444,13 @@ Output subsetsumsolver::dynamic_programming_bellman_word_ram_rec(
 
     Solution solution(instance);
     if (instance.number_of_items() > 0) {
+        Weight gcd = compute_weights_gcd(instance);
         dynamic_programming_bellman_word_ram_rec_rec(
             instance,
+            gcd,
             0,
             instance.number_of_items(),
-            instance.capacity(),
+            instance.capacity() / gcd,
             solution,
             parameters);
     }

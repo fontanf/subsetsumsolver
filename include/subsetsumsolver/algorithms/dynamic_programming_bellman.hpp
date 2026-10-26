@@ -12,11 +12,19 @@ struct DynamicProgrammingBellmanArrayOutput: public Output
         Output(instance)
     { }
 
+    /**
+     * Greatest common divisor of the weights of the items: the table is
+     * indexed by the weights divided by it.
+     */
+    Weight gcd = 1;
+
     std::vector<ItemId> values;
 
     bool is_reachable(Weight weight) const
     {
-        return values[weight] != -1;
+        if (weight % gcd != 0)
+            return false;
+        return values[weight / gcd] != -1;
     }
 };
 
@@ -35,13 +43,21 @@ struct DynamicProgrammingBellmanWordRamOutput: public Output
         Output(instance)
     { }
 
+    /**
+     * Greatest common divisor of the weights of the items: the table is
+     * indexed by the weights divided by it.
+     */
+    Weight gcd = 1;
+
     std::vector<uint64_t> values;
 
     bool is_reachable(Weight weight) const
     {
-        Weight word = weight / 64;
-        int bit = weight % 64;
-        return (values[word] >> bit);
+        if (weight % gcd != 0)
+            return false;
+        Weight word = (weight / gcd) / 64;
+        int bit = (weight / gcd) % 64;
+        return ((values[word] >> bit) & 1) == 1;
     }
 };
 

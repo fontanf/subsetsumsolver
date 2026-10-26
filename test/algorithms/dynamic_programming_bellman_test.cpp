@@ -121,7 +121,7 @@ TEST(SubsetSumDynamicProgrammingBellmanWordRam, NothingButZeroReachable)
     }
 }
 
-struct SubsetSumDynamicProgrammingBellmanWordRamRecTestParams
+struct SubsetSumDynamicProgrammingBellmanTestParams
 {
     fs::path instance_path;
 
@@ -130,32 +130,47 @@ struct SubsetSumDynamicProgrammingBellmanWordRamRecTestParams
 
 inline std::ostream& operator<<(
         std::ostream& os,
-        const SubsetSumDynamicProgrammingBellmanWordRamRecTestParams& test_params)
+        const SubsetSumDynamicProgrammingBellmanTestParams& test_params)
 {
     os << test_params.instance_path;
     return os;
 }
 
-class SubsetSumDynamicProgrammingBellmanWordRamRecTest: public testing::TestWithParam<SubsetSumDynamicProgrammingBellmanWordRamRecTestParams> { };
+class SubsetSumDynamicProgrammingBellmanTest: public testing::TestWithParam<SubsetSumDynamicProgrammingBellmanTestParams> { };
 
-TEST_P(SubsetSumDynamicProgrammingBellmanWordRamRecTest, SubsetSumDynamicProgrammingBellmanWordRamRec)
+TEST_P(SubsetSumDynamicProgrammingBellmanTest, SubsetSumDynamicProgrammingBellman)
 {
-    SubsetSumDynamicProgrammingBellmanWordRamRecTestParams test_params = GetParam();
+    SubsetSumDynamicProgrammingBellmanTestParams test_params = GetParam();
     InstanceBuilder instance_builder;
     instance_builder.read(test_params.instance_path.string(), "standard");
     const Instance instance = instance_builder.build();
     const Solution solution(instance, test_params.certificate_path.string());
 
-    auto output = dynamic_programming_bellman_word_ram_rec(instance);
-    EXPECT_EQ(output.value, solution.weight());
-    EXPECT_EQ(output.value, output.solution.weight());
-    EXPECT_EQ(output.bound, solution.weight());
+    auto output_array = dynamic_programming_bellman_array(instance);
+    EXPECT_EQ(output_array.value, solution.weight());
+    EXPECT_EQ(output_array.value, output_array.solution.weight());
+    EXPECT_EQ(output_array.bound, solution.weight());
+    EXPECT_TRUE(output_array.is_reachable(solution.weight()));
+
+    auto output_list = dynamic_programming_bellman_list(instance);
+    EXPECT_EQ(output_list.value, solution.weight());
+    EXPECT_EQ(output_list.bound, solution.weight());
+
+    auto output_word_ram = dynamic_programming_bellman_word_ram(instance);
+    EXPECT_EQ(output_word_ram.value, solution.weight());
+    EXPECT_EQ(output_word_ram.bound, solution.weight());
+    EXPECT_TRUE(output_word_ram.is_reachable(solution.weight()));
+
+    auto output_word_ram_rec = dynamic_programming_bellman_word_ram_rec(instance);
+    EXPECT_EQ(output_word_ram_rec.value, solution.weight());
+    EXPECT_EQ(output_word_ram_rec.value, output_word_ram_rec.solution.weight());
+    EXPECT_EQ(output_word_ram_rec.bound, solution.weight());
 }
 
 INSTANTIATE_TEST_SUITE_P(
         SubsetSum,
-        SubsetSumDynamicProgrammingBellmanWordRamRecTest,
-        testing::ValuesIn(std::vector<SubsetSumDynamicProgrammingBellmanWordRamRecTestParams>{
+        SubsetSumDynamicProgrammingBellmanTest,
+        testing::ValuesIn(std::vector<SubsetSumDynamicProgrammingBellmanTestParams>{
             {
                 fs::path("data") / "tests" / "no_item" / "instance.txt",
                 fs::path("data") / "tests" / "no_item" / "solution.txt",
@@ -165,4 +180,13 @@ INSTANTIATE_TEST_SUITE_P(
             }, {
                 fs::path("data") / "tests" / "single_item_too_heavy" / "instance.txt",
                 fs::path("data") / "tests" / "single_item_too_heavy" / "solution.txt",
+            }, {
+                // The greatest common divisor of the weights is 10.
+                fs::path("data") / "tests" / "gcd" / "instance.txt",
+                fs::path("data") / "tests" / "gcd" / "solution.txt",
+            }, {
+                // The greatest common divisor of the weights is 10, and the
+                // capacity is not a multiple of it.
+                fs::path("data") / "tests" / "gcd_capacity_rounded_down" / "instance.txt",
+                fs::path("data") / "tests" / "gcd_capacity_rounded_down" / "solution.txt",
             }}));
