@@ -5,4 +5,5 @@ target_link_libraries(SubsetSumSolver_dynamic_programming_bellman_test
     SubsetSumSolver_dynamic_programming_bellman
     SubsetSumSolver_tests
     GTest::gtest_main)
-add_test(SubsetSumSolver_dynamic_programming_bellman_test SubsetSumSolver_dynamic_programming_bellman_test)
+gtest_discover_tests(SubsetSumSolver_dynamic_programming_bellman_test
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
